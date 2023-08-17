@@ -1,0 +1,1 @@
+/home/vika/PG/bin/postgres "-D" "/home/vika/Desktop/work/postgres/dev-ee-probackup/pg_probackup_ee/tests/tmp_dirs/PtrackLoadTest/test_load_ptrack_zero_pages/node/data"
