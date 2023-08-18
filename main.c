@@ -11,6 +11,11 @@ CompressionInterface ZSTD_Interface = {
         .decompress = zstd_decompress
 };
 
+CompressionInterface ZSTD_no_dict_Interface = {
+        .trainDict = NULL,
+        .compress = zstd_compress,
+        .decompress = zstd_decompress
+};
 
 CompressionInterface LZ4_Interface = {
         .trainDict = lz4_zstdTrainDict,
@@ -18,8 +23,15 @@ CompressionInterface LZ4_Interface = {
         .decompress = lz4_decompress
 };
 
+CompressionInterface LZ4_no_dict_Interface = {
+        .trainDict = NULL,
+        .compress = lz4_compress_noDict,
+        .decompress = lz4_decompress_noDict
+};
+
+
 int main() {
-    CompressionInterface* compression = &LZ4_Interface;
+    CompressionInterface* compression = &ZSTD_Interface;
 
     double minCompressionTime = DBL_MAX, maxCompressionTime = 0.0, totalCompressionTime = 0.0;
     double minDecompressionTime = DBL_MAX, maxDecompressionTime = 0.0, totalDecompressionTime = 0.0;
@@ -55,20 +67,23 @@ int main() {
             fprintf(stderr, "File size exceeds the maximum training size\n");
             continue;
         }
+        size_t dictSize = 0;
 
         // Dictionary Training
-        clock_t dictStartTime = clock();
-        size_t dictSize = compression->trainDict(dictBuffer, MAX_DICT_SIZE, data, samplesSizes, SAMPLE_COUNT);
-        clock_t dictEndTime = clock();
-        if (ZSTD_isError(dictSize)) {
-            fprintf(stderr, "Dictionary training failed: %s. numFiles: %lu; filename: %s\n", ZSTD_getErrorName(dictSize), numFiles, remainingFiles[numFiles].fileName);
-            continue;
+        if (compression->trainDict) {  /* If using dictionary */
+            clock_t dictStartTime = clock();
+            dictSize = compression->trainDict(dictBuffer, MAX_DICT_SIZE, data, samplesSizes, SAMPLE_COUNT);
+            clock_t dictEndTime = clock();
+            if (ZSTD_isError(dictSize)) {
+                fprintf(stderr, "Dictionary training failed: %s. numFiles: %lu; filename: %s\n",
+                        ZSTD_getErrorName(dictSize), numFiles, remainingFiles[numFiles].fileName);
+                continue;
+            }
+            double dictTime = (double) (dictEndTime - dictStartTime) / CLOCKS_PER_SEC;
+            minDictTrainingTime = fmin(minDictTrainingTime, dictTime);
+            maxDictTrainingTime = fmax(maxDictTrainingTime, dictTime);
+            totalDictTrainingTime += dictTime;
         }
-        double dictTime = (double)(dictEndTime - dictStartTime) / CLOCKS_PER_SEC;
-        minDictTrainingTime = fmin(minDictTrainingTime, dictTime);
-        maxDictTrainingTime = fmax(maxDictTrainingTime, dictTime);
-        totalDictTrainingTime += dictTime;
-
         for (size_t pageOffset = 0; pageOffset < bytesRead; pageOffset += PAGE_SIZE) {
             size_t currentPageSize = (bytesRead - pageOffset < PAGE_SIZE) ? bytesRead - pageOffset : PAGE_SIZE;
 
@@ -118,7 +133,10 @@ int main() {
     printf("+----------------------------------+--------------+--------------+--------------+\n");
     printf("| Metric                           | Average      | Min          | Max          |\n");
     printf("+----------------------------------+--------------+--------------+--------------+\n");
-    printf("| Dictionary training time (s)     | %12.6lf | %12.6lf | %12.6lf |\n", totalDictTrainingTime / successfulOperationsCount, minDictTrainingTime, maxDictTrainingTime);
+    if (compression->trainDict) {  /* If using dictionary */
+        printf("| Dictionary training time (s)     | %12.6lf | %12.6lf | %12.6lf |\n",
+               totalDictTrainingTime / successfulOperationsCount, minDictTrainingTime, maxDictTrainingTime);
+    }
     printf("| Compression time (s)             | %12.6lf | %12.6lf | %12.6lf |\n", totalCompressionTime / successfulOperationsCount, minCompressionTime, maxCompressionTime);
     printf("| Decompression time (s)           | %12.6lf | %12.6lf | %12.6lf |\n", totalDecompressionTime / successfulOperationsCount, minDecompressionTime, maxDecompressionTime);
     printf("| Compression ratio                | %12.6lf | %12.6lf | %12.6lf |\n", totalCompressionRatio / successfulOperationsCount, minCompressionRatio, maxCompressionRatio);

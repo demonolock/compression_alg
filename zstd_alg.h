@@ -16,3 +16,9 @@ zstd_compress(const unsigned char *data, size_t dataSize, unsigned char *compres
 size_t
 zstd_decompress(const unsigned char *compressed, size_t compressedSize, unsigned char *decompressed,
                 size_t decompressedMaxSize, const unsigned char *dict, size_t dictSize);
+
+size_t
+zstd_compress_noDict(const unsigned char* data, size_t dataSize, unsigned char* compressed, size_t compressedMaxSize, const unsigned char *dict, size_t dictSize);
+
+size_t
+zstd_decompress_noDict(const unsigned char* compressed, size_t compressedSize, unsigned char* decompressed, size_t decompressedMaxSize, const unsigned char *dict, size_t dictSize);

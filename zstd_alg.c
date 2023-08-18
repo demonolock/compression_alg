@@ -22,6 +22,22 @@ zstd_decompress(const unsigned char* compressed, size_t compressedSize, unsigned
     return decompressedSize;
 }
 
+size_t
+zstd_compress_noDict(const unsigned char* data, size_t dataSize, unsigned char* compressed, size_t compressedMaxSize, const unsigned char *dict, size_t dictSize) {
+    ZSTD_CCtx* cctx = ZSTD_createCCtx();
+    size_t compressedSize = ZSTD_compressCCtx(cctx, compressed, compressedMaxSize, data, dataSize, 3);
+    ZSTD_freeCCtx(cctx);
+    return compressedSize;
+}
+
+size_t
+zstd_decompress_noDict(const unsigned char* compressed, size_t compressedSize, unsigned char* decompressed, size_t decompressedMaxSize, const unsigned char *dict, size_t dictSize) {
+    ZSTD_DCtx* dctx = ZSTD_createDCtx();
+    size_t decompressedSize = ZSTD_decompressDCtx(dctx, decompressed, decompressedMaxSize, compressed, compressedSize);
+    ZSTD_freeDCtx(dctx);
+    return decompressedSize;
+}
+
 
 
 

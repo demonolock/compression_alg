@@ -64,3 +64,13 @@ lz4_decompress(const unsigned char *compressed, size_t compressedSize, unsigned 
     LZ4_freeStreamDecode(lz4StreamDecode);
     return (size_t)decompressedSize;
 }
+
+size_t
+lz4_compress_noDict(const unsigned char *data, size_t dataSize, unsigned char *compressed, size_t compressedMaxSize) {
+    return (size_t) LZ4_compress_default((const char *)data, (char *)compressed, (int)dataSize, (int)compressedMaxSize);
+}
+
+size_t
+lz4_decompress_noDict(const unsigned char *compressed, size_t compressedSize, unsigned char *decompressed, size_t decompressedMaxSize) {
+    return (size_t) LZ4_decompress_safe((const char *)compressed, (char *)decompressed, (int)compressedSize, (int)decompressedMaxSize);
+}
