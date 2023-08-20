@@ -4,6 +4,8 @@
 #include "zstd_alg.h"
 #include "compr_alg.h"
 #include "lz4_alg.h"
+#include "libdeflate_alg.h"
+#include "zlib_alg.h"
 
 CompressionInterface ZSTD_Interface = {
         .trainDict = zstd_trainDict,
@@ -29,6 +31,17 @@ CompressionInterface LZ4_no_dict_Interface = {
         .decompress = lz4_decompress_noDict
 };
 
+CompressionInterface Libdeflate_no_dict_Interface = {
+        .trainDict = NULL,
+        .compress = libdeflate_compress_noDict,
+        .decompress = libdeflate_decompress_noDict
+};
+
+CompressionInterface Zlib_no_dict_Interface = {
+        .trainDict = NULL,
+        .compress = zlib_compress_noDict,
+        .decompress = zlib_decompress_noDict
+};
 
 int main() {
     CompressionInterface* compression = &ZSTD_Interface;

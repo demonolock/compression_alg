@@ -1,4 +1,6 @@
 /* Common for all compression algorithms */
+#ifndef COMPR_ALG_H
+#define COMPR_ALG_H
 #include <stdio.h>
 #include <string.h>
 #include <dirent.h>
@@ -26,3 +28,5 @@ getAllFiles(const char* directoryPath, char fileNames[][256]);
 
 size_t
 readDataFromMultipleFiles(FileState remainingFiles[], size_t* numRemainingFiles, unsigned char* buffer);
+
+#endif // COMPR_ALG_H
