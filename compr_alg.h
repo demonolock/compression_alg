@@ -7,7 +7,7 @@
 #include <sys/stat.h>
 
 #define SAMPLE_COUNT 16
-#define PAGE_SIZE 1024
+#define PAGE_SIZE 1024 * 8
 #define MAX_TRAIN_SIZE (SAMPLE_COUNT * PAGE_SIZE)  // 16KB (16 Pages)
 #define MAX_FILES 10000
 

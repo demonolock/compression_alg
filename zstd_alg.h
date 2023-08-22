@@ -3,7 +3,7 @@
 #include <zdict.h>
 
 #define MAX_COMPRESS_SIZE ZSTD_compressBound(MAX_TRAIN_SIZE)
-#define MAX_DICT_SIZE 131072  // 128 KB
+#define MAX_DICT_SIZE 2048  // 2 KB
 
 size_t
 zstd_trainDict(unsigned char *dictBuffer, size_t dictMaxSize, const unsigned char *data, const size_t *samplesSizes,
