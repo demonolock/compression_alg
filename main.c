@@ -98,10 +98,10 @@ int main() {
             maxDictTrainingTime = fmax(maxDictTrainingTime, dictTime);
             totalDictTrainingTime += dictTime;
         }
-        for (size_t pageOffset = 0; pageOffset < bytesRead; pageOffset += PAGE_SIZE) {
-            size_t currentPageSize = (bytesRead - pageOffset < PAGE_SIZE) ? bytesRead - pageOffset : PAGE_SIZE;
+        for (size_t pageOffset = 0; pageOffset < bytesRead; pageOffset += SAMPLE_COUNT * PAGE_SIZE) {
+            size_t currentPageSize = (bytesRead - pageOffset < SAMPLE_COUNT * PAGE_SIZE) ? bytesRead - pageOffset : SAMPLE_COUNT * PAGE_SIZE;
 
-            // Compression for the current page
+            // Compression for the current page block
             unsigned char compressedData[MAX_COMPRESS_SIZE];
             clock_t compressionStartTime = clock();
             size_t compressedSize = compression->compress(&data[pageOffset], currentPageSize, compressedData, MAX_COMPRESS_SIZE, dictBuffer, dictSize);
@@ -119,12 +119,12 @@ int main() {
             double compressionRatio = (double)compressedSize / (double)currentPageSize;
             minCompressionRatio = fmin(minCompressionRatio, compressionRatio);
             maxCompressionRatio = fmax(maxCompressionRatio, compressionRatio);
-            totalCompressionRatio += compressionRatio;
+            totalCompressionRatio += compressionRatio * SAMPLE_COUNT;
 
-            // Decompression for the current page
-            unsigned char decompressedData[PAGE_SIZE];
+            // Decompression for the current page block
+            unsigned char decompressedData[SAMPLE_COUNT * PAGE_SIZE];
             clock_t decompressionStartTime = clock();
-            size_t decompressedSize = compression->decompress(compressedData, compressedSize, decompressedData, PAGE_SIZE, dictBuffer, dictSize);
+            size_t decompressedSize = compression->decompress(compressedData, compressedSize, decompressedData, SAMPLE_COUNT * PAGE_SIZE, dictBuffer, dictSize);
             clock_t decompressionEndTime = clock();
             if (ZSTD_isError(decompressedSize)) {
                 fprintf(stderr, "Decompression failed: %s\n", ZSTD_getErrorName(decompressedSize));
@@ -135,16 +135,16 @@ int main() {
             maxDecompressionTime = fmax(maxDecompressionTime, decompressionTime);
             totalDecompressionTime += decompressionTime;
 
-            successfulOperationsCount++;
+            successfulOperationsCount+=SAMPLE_COUNT;
 
-            // Validate decompressed data for the current page
+            // Validate decompressed data for the current page block
             if (currentPageSize != decompressedSize || memcmp(&data[pageOffset], decompressedData, currentPageSize) != 0) {
-                fprintf(stderr, "Original and decompressed files for page at offset %zu do not match!\n", pageOffset);
+                fprintf(stderr, "Original and decompressed files for page block at offset %zu do not match!\n", pageOffset);
                 continue;
             }
 
             // Calculate the effective compressed size considering the dictionary size (1 dict on 16 pages)
-            size_t effectiveCompressedSize = compressedSize + dictSize / SAMPLE_COUNT;
+            size_t effectiveCompressedSize = compressedSize + dictSize;
             double compressionRatioWithDict = (double) effectiveCompressedSize / (double) currentPageSize;
             minCompressionRatioWithDict = fmin(minCompressionRatioWithDict, compressionRatioWithDict);
             maxCompressionRatioWithDict = fmax(maxCompressionRatioWithDict, compressionRatioWithDict);
@@ -164,6 +164,6 @@ int main() {
     printf("| Compression ratio                | %12.6lf | %12.6lf | %12.6lf |\n", totalCompressionRatio / successfulOperationsCount, minCompressionRatio, maxCompressionRatio);
     printf("+----------------------------------+--------------+--------------+--------------+\n");
 
-    printf("Compression and decompression for all pages were successful! Original and decompressed pages match.\n");
+    printf("Compression and decompression for all page blocks were successful! Original and decompressed blocks match.\n");
     return 0;
 }
