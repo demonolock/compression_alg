@@ -44,12 +44,13 @@ CompressionInterface Zlib_no_dict_Interface = {
 };
 
 int main() {
-    CompressionInterface* compression = &ZSTD_Interface;
+    CompressionInterface* compression = &LZ4_no_dict_Interface;
 
     double minCompressionTime = DBL_MAX, maxCompressionTime = 0.0, totalCompressionTime = 0.0;
     double minDecompressionTime = DBL_MAX, maxDecompressionTime = 0.0, totalDecompressionTime = 0.0;
     double minDictTrainingTime = DBL_MAX, maxDictTrainingTime = 0.0, totalDictTrainingTime = 0.0;
     double minCompressionRatio = DBL_MAX, maxCompressionRatio = 0.0, totalCompressionRatio = 0.0;
+    double minCompressionRatioWithDict = DBL_MAX, maxCompressionRatioWithDict = 0.0, totalCompressionRatioWithDict = 0.0;
     int successfulOperationsCount = 0;
 
     unsigned char data[MAX_TRAIN_SIZE];
@@ -141,20 +142,27 @@ int main() {
                 fprintf(stderr, "Original and decompressed files for page at offset %zu do not match!\n", pageOffset);
                 continue;
             }
+
+            // Calculate the effective compressed size considering the dictionary size (1 dict on 16 pages)
+            size_t effectiveCompressedSize = compressedSize + dictSize / SAMPLE_COUNT;
+            double compressionRatioWithDict = (double) effectiveCompressedSize / (double) currentPageSize;
+            minCompressionRatioWithDict = fmin(minCompressionRatioWithDict, compressionRatioWithDict);
+            maxCompressionRatioWithDict = fmax(maxCompressionRatioWithDict, compressionRatioWithDict);
+            totalCompressionRatioWithDict += compressionRatioWithDict;
         }
     }
     printf("+----------------------------------+--------------+--------------+--------------+\n");
     printf("| Metric                           | Average      | Min          | Max          |\n");
     printf("+----------------------------------+--------------+--------------+--------------+\n");
     if (compression->trainDict) {  /* If using dictionary */
-        printf("| Dictionary training time (s)     | %12.6lf | %12.6lf | %12.6lf |\n",
-               totalDictTrainingTime / successfulOperationsCount, minDictTrainingTime, maxDictTrainingTime);
+        printf("| Dictionary training time (s)     | %12.6lf | %12.6lf | %12.6lf |\n", totalDictTrainingTime / successfulOperationsCount, minDictTrainingTime, maxDictTrainingTime);
+        printf("| Compression time (s) + dict time | %12.6lf | %12.6lf | %12.6lf |\n", totalCompressionTime / successfulOperationsCount + totalDictTrainingTime / successfulOperationsCount, minCompressionTime, maxCompressionTime);
+        printf("| Compression ratio + dict size    | %12.6lf | %12.6lf | %12.6lf |\n", totalCompressionRatioWithDict / successfulOperationsCount, minCompressionRatioWithDict, maxCompressionRatioWithDict);
     }
     printf("| Compression time (s)             | %12.6lf | %12.6lf | %12.6lf |\n", totalCompressionTime / successfulOperationsCount, minCompressionTime, maxCompressionTime);
     printf("| Decompression time (s)           | %12.6lf | %12.6lf | %12.6lf |\n", totalDecompressionTime / successfulOperationsCount, minDecompressionTime, maxDecompressionTime);
     printf("| Compression ratio                | %12.6lf | %12.6lf | %12.6lf |\n", totalCompressionRatio / successfulOperationsCount, minCompressionRatio, maxCompressionRatio);
     printf("+----------------------------------+--------------+--------------+--------------+\n");
-
 
     printf("Compression and decompression for all pages were successful! Original and decompressed pages match.\n");
     return 0;

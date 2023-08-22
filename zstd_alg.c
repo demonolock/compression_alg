@@ -10,7 +10,7 @@ zstd_trainDict(unsigned char* dictBuffer, size_t dictMaxSize, const unsigned cha
 size_t
 zstd_compress(const unsigned char* data, size_t dataSize, unsigned char* compressed, size_t compressedMaxSize, const unsigned char* dict, size_t dictSize) {
     ZSTD_CCtx* cctx = ZSTD_createCCtx();
-    size_t compressedSize = ZSTD_compress_usingDict(cctx, compressed, compressedMaxSize, data, dataSize, dict, dictSize, 3);
+    size_t compressedSize = ZSTD_compress_usingDict(cctx, compressed, compressedMaxSize, data, dataSize, dict, dictSize, ZSTD_COMPRESSION_LEVEL);
     ZSTD_freeCCtx(cctx);
     return compressedSize;
 }
