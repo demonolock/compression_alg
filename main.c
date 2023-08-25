@@ -44,7 +44,7 @@ CompressionInterface Zlib_no_dict_Interface = {
 };
 
 int main() {
-    CompressionInterface* compression = &ZSTD_no_dict_Interface;
+    CompressionInterface* compression = &LZ4_no_dict_Interface;
 
     double minCompressionTime = DBL_MAX, maxCompressionTime = 0.0, totalCompressionTime = 0.0;
     double minDecompressionTime = DBL_MAX, maxDecompressionTime = 0.0, totalDecompressionTime = 0.0;
