@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-I. # -g
+CFLAGS=-I. # -g -O0
 LIBS=-lzstd -llz4 -lm -ldeflate -lz
 
 build:
