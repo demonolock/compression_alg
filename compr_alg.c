@@ -2,7 +2,7 @@
 
 // Exclude non data files
 int
-is_excluded(const char* dir_path, const char* filename) {
+is_excluded(const char *dir_path, const char *filename) {
     const char *excluded_files[] = {".map", ".init", "PG_VERSION", "pg_control", "..", NULL};
     const char *not_excluded_dirs[] = {"/base", "/global", "/pg_tblspc", NULL};
 
@@ -22,9 +22,9 @@ is_excluded(const char* dir_path, const char* filename) {
 }
 
 size_t
-getFilesFromDirectoryRecursively(const char* directoryPath, char fileNames[][256], size_t currentCount) {
-    DIR* dir = opendir(directoryPath);
-    struct dirent* entry;
+getFilesFromDirectoryRecursively(const char *directoryPath, char fileNames[][256], size_t currentCount) {
+    DIR *dir = opendir(directoryPath);
+    struct dirent *entry;
 
     if (dir == NULL) {
         perror("Failed to open directory");
@@ -78,13 +78,13 @@ getFilesFromDirectoryRecursively(const char* directoryPath, char fileNames[][256
 }
 
 size_t
-getAllFiles(const char* directoryPath, char fileNames[][256]) {
+getAllFiles(const char *directoryPath, char fileNames[][256]) {
     return getFilesFromDirectoryRecursively(directoryPath, fileNames, 0);
 }
 
 // Get file size
 long
-fsize(FILE* file) {
+fsize(FILE *file) {
     long prevPos = ftell(file);
     fseek(file, 0, SEEK_END);
     long size = ftell(file);
@@ -94,13 +94,13 @@ fsize(FILE* file) {
 
 
 size_t
-readDataFromMultipleFiles(FileState remainingFiles[], size_t* numRemainingFiles, unsigned char* buffer) {
+readDataFromMultipleFiles(FileState remainingFiles[], size_t *numRemainingFiles, unsigned char *buffer) {
     size_t totalBytesRead = 0;
     size_t blockIndex = 0;
     size_t currentFile = 0;
 
     while (blockIndex < SAMPLE_COUNT && currentFile < *numRemainingFiles) {
-        FILE* file = fopen(remainingFiles[currentFile].fileName, "rb");
+        FILE *file = fopen(remainingFiles[currentFile].fileName, "rb");
         if (!file) {
             perror("Failed to open file for reading");
             currentFile++;
@@ -108,12 +108,19 @@ readDataFromMultipleFiles(FileState remainingFiles[], size_t* numRemainingFiles,
         }
 
         fseek(file, remainingFiles[currentFile].offset, SEEK_SET);
-        size_t blocksReadFromCurrentFile = 0;  // новая переменная для подсчета блоков из текущего файла
+        size_t blocksReadFromCurrentFile = 0;
 
         while (blockIndex < SAMPLE_COUNT && blocksReadFromCurrentFile < SAMPLE_COUNT) {
             size_t bytesRead = fread(buffer + blockIndex * PAGE_SIZE, 1, PAGE_SIZE, file);
             if (bytesRead < PAGE_SIZE) {
-                break;
+                if (feof(file)) {
+                    // Reached end of file
+                    break;
+                } else if (ferror(file)) {
+                    perror("Error reading file");
+                    fclose(file);
+                    return totalBytesRead;
+                }
             }
 
             totalBytesRead += bytesRead;
@@ -121,8 +128,10 @@ readDataFromMultipleFiles(FileState remainingFiles[], size_t* numRemainingFiles,
             blocksReadFromCurrentFile++;
         }
 
-        if (ftell(file) >= fsize(file)) {
-            for (size_t i = currentFile; i < *numRemainingFiles; ++i) {
+        fclose(file);
+
+        if (ftell(file) >= remainingFiles[currentFile].offset + blocksReadFromCurrentFile * PAGE_SIZE) {
+            for (size_t i = currentFile; i < *numRemainingFiles - 1; ++i) {
                 remainingFiles[i] = remainingFiles[i + 1];
             }
             (*numRemainingFiles)--;
@@ -130,8 +139,6 @@ readDataFromMultipleFiles(FileState remainingFiles[], size_t* numRemainingFiles,
             remainingFiles[currentFile].offset += blocksReadFromCurrentFile * PAGE_SIZE;
             currentFile++;
         }
-
-        fclose(file);
     }
 
     if (blockIndex < SAMPLE_COUNT) {
