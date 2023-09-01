@@ -50,3 +50,7 @@ The program provides a comprehensive report on the compression and decompression
 | Compression ratio                |     0.101090 |     0.021484 |     1.013672 |
 +----------------------------------+--------------+--------------+--------------+
 ```
+
+### For generating graph report you can use `view/analysis.py`
+
+![ALT_TEXT](view/comr_alg.png)
