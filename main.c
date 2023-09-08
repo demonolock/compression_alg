@@ -174,10 +174,10 @@ compress_16_blk(CompressionInterface *compression) {
     }
     // dict training time got 1 block
     float dictTrainingTime = totalDictTrainingTime / successfulOperationsCount;
-    // compression time + dict train time for 1 block
-    float compressionAndDictTime = (totalCompressionTime / successfulOperationsCount + dictTrainingTime) / SAMPLE_COUNT;
     // compression time without dict for 1 block
     float compressionTime = (totalCompressionTime / successfulOperationsCount) / SAMPLE_COUNT;
+    // compression time + dict train time for 1 block
+    float compressionAndDictTime = compressionTime + dictTrainingTime;
     // average compression ratio with dict
     float compressionRatioWithDict = totalCompressionRatioWithDict / successfulOperationsCount;
     // average compression without dict
@@ -262,6 +262,7 @@ compress_1_blk(CompressionInterface *compression) {
                 continue;
             }
             double dictTime = (double) (dictEndTime - dictStartTime) / CLOCKS_PER_SEC / SAMPLE_COUNT;
+            // printf("dict full time = %f\n", (double) (dictEndTime - dictStartTime) / CLOCKS_PER_SEC );
             minDictTrainingTime = fmin(minDictTrainingTime, dictTime);
             maxDictTrainingTime = fmax(maxDictTrainingTime, dictTime);
             totalDictTrainingTime += dictTime;
