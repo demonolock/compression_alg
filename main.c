@@ -51,6 +51,8 @@ CompressionInterface Zlib_no_dict_Interface = {
         .name = "Zlib"
 };
 
+
+
 /* Compress 16 blocks together, train dict on 16 blocks*/
 int
 compress_16_blk(CompressionInterface *compression) {
@@ -101,7 +103,7 @@ compress_16_blk(CompressionInterface *compression) {
                         ZSTD_getErrorName(dictSize), numFiles, remainingFiles[numFiles].fileName);
                 continue;
             }
-            double dictTime = (double) (dictEndTime - dictStartTime) / CLOCKS_PER_SEC;
+            double dictTime = (double) (dictEndTime - dictStartTime) / CLOCKS_PER_SEC / SAMPLE_COUNT; // For 1 block
             minDictTrainingTime = fmin(minDictTrainingTime, dictTime);
             maxDictTrainingTime = fmax(maxDictTrainingTime, dictTime);
             totalDictTrainingTime += dictTime;
@@ -129,7 +131,7 @@ compress_16_blk(CompressionInterface *compression) {
             double compressionRatio = (double) compressedSize / (double) currentPageSize;
             minCompressionRatio = fmin(minCompressionRatio, compressionRatio);
             maxCompressionRatio = fmax(maxCompressionRatio, compressionRatio);
-            totalCompressionRatio += compressionRatio * SAMPLE_COUNT;
+            totalCompressionRatio += compressionRatio;
 
             // Decompression for the current page block
             unsigned char decompressedData[SAMPLE_COUNT * PAGE_SIZE];
@@ -170,6 +172,17 @@ compress_16_blk(CompressionInterface *compression) {
         perror("Failed to open CSV file for writing");
         return 1;
     }
+    // dict training time got 1 block
+    float dictTrainingTime = totalDictTrainingTime / successfulOperationsCount;
+    // compression time + dict train time for 1 block
+    float compressionAndDictTime = (totalCompressionTime / successfulOperationsCount + dictTrainingTime) / SAMPLE_COUNT;
+    // compression time without dict for 1 block
+    float compressionTime = (totalCompressionTime / successfulOperationsCount) / SAMPLE_COUNT;
+    // average compression ratio with dict
+    float compressionRatioWithDict = totalCompressionRatioWithDict / successfulOperationsCount;
+    // average compression without dict
+    float compressionRatio = totalCompressionRatio / successfulOperationsCount;
+
 
     printf("\nCompression algorithm: %s\n", compression->name);
     printf("+----------------------------------+--------------+--------------+--------------+\n");
@@ -177,24 +190,22 @@ compress_16_blk(CompressionInterface *compression) {
     printf("+----------------------------------+--------------+--------------+--------------+\n");
     if (compression->trainDict) {  /* If using dictionary */
         printf("| Dictionary training time (s)     | %12.6lf | %12.6lf | %12.6lf |\n",
-               totalDictTrainingTime / successfulOperationsCount, minDictTrainingTime, maxDictTrainingTime);
+               dictTrainingTime, minDictTrainingTime, maxDictTrainingTime);
         printf("| Compression time (s) + dict time | %12.6lf | %12.6lf | %12.6lf |\n",
-               (totalCompressionTime / successfulOperationsCount + totalDictTrainingTime / successfulOperationsCount) / SAMPLE_COUNT,
-               minCompressionTime, maxCompressionTime);
+               compressionAndDictTime, minCompressionTime, maxCompressionTime);
         printf("| Compression ratio + dict size    | %12.6lf | %12.6lf | %12.6lf |\n",
-               totalCompressionRatioWithDict / successfulOperationsCount, minCompressionRatioWithDict,
-               maxCompressionRatioWithDict);
-        fprintf(csvFile, "%s16,%12.6lf,%12.6lf\n", compression->name, (totalCompressionTime / successfulOperationsCount + totalDictTrainingTime / successfulOperationsCount) / SAMPLE_COUNT, totalCompressionRatioWithDict / successfulOperationsCount);
+               compressionRatioWithDict, minCompressionRatioWithDict, maxCompressionRatioWithDict);
+        fprintf(csvFile, "%s16,%12.6lf,%12.6lf\n", compression->name, compressionAndDictTime, compressionRatioWithDict);
     }
     else {
-        fprintf(csvFile, "%s16,%12.6lf,%12.6lf\n", compression->name, (totalCompressionTime / successfulOperationsCount) / SAMPLE_COUNT, totalCompressionRatioWithDict / successfulOperationsCount);
+        fprintf(csvFile, "%s16,%12.6lf,%12.6lf\n", compression->name, compressionTime, compressionRatio);
     }
     printf("| Compression time (s)             | %12.6lf | %12.6lf | %12.6lf |\n",
-           (totalCompressionTime / successfulOperationsCount) / SAMPLE_COUNT, minCompressionTime, maxCompressionTime);
+           compressionTime, minCompressionTime, maxCompressionTime);
     printf("| Decompression time (s)           | %12.6lf | %12.6lf | %12.6lf |\n",
            (totalDecompressionTime / successfulOperationsCount) / SAMPLE_COUNT, minDecompressionTime, maxDecompressionTime);
     printf("| Compression ratio                | %12.6lf | %12.6lf | %12.6lf |\n",
-           totalCompressionRatio / successfulOperationsCount, minCompressionRatio, maxCompressionRatio);
+           compressionRatio, minCompressionRatio, maxCompressionRatio);
     printf("+----------------------------------+--------------+--------------+--------------+\n");
     fclose(csvFile);
     //printf("Compression and decompression for all page blocks were successful! Original and decompressed blocks match.\n");
@@ -250,7 +261,7 @@ compress_1_blk(CompressionInterface *compression) {
                         ZSTD_getErrorName(dictSize), numFiles, remainingFiles[numFiles].fileName);
                 continue;
             }
-            double dictTime = (double) (dictEndTime - dictStartTime) / CLOCKS_PER_SEC;
+            double dictTime = (double) (dictEndTime - dictStartTime) / CLOCKS_PER_SEC / SAMPLE_COUNT;
             minDictTrainingTime = fmin(minDictTrainingTime, dictTime);
             maxDictTrainingTime = fmax(maxDictTrainingTime, dictTime);
             totalDictTrainingTime += dictTime;
@@ -294,7 +305,7 @@ compress_1_blk(CompressionInterface *compression) {
             maxDecompressionTime = fmax(maxDecompressionTime, decompressionTime);
             totalDecompressionTime += decompressionTime;
 
-            successfulOperationsCount++;
+            successfulOperationsCount++; // the number of pages
 
             // Validate decompressed data for the current page
             if (currentPageSize != decompressedSize ||
@@ -317,6 +328,17 @@ compress_1_blk(CompressionInterface *compression) {
         perror("Failed to open CSV file for writing");
         return 1;
     }
+    // dict training time for 1 block
+    float dictTrainingTime = totalDictTrainingTime / successfulOperationsCount * SAMPLE_COUNT;
+    // compression time without dict
+    float compressionTime = totalCompressionTime / successfulOperationsCount;
+    // compression time + dict train time for 1 block
+    float compressionTimeWithDict = compressionTime + dictTrainingTime;
+    // compression ratio + fict for 1 block
+    float compressionRatioWithDict = totalCompressionRatioWithDict / successfulOperationsCount;
+    // compression ratio without dict
+    float compressionRatio = totalCompressionRatio / successfulOperationsCount;
+
 
     printf("\nCompression algorithm: %s\n", compression->name);
     printf("+----------------------------------+--------------+--------------+--------------+\n");
@@ -324,24 +346,22 @@ compress_1_blk(CompressionInterface *compression) {
     printf("+----------------------------------+--------------+--------------+--------------+\n");
     if (compression->trainDict) {  /* If using dictionary */
         printf("| Dictionary training time (s)     | %12.6lf | %12.6lf | %12.6lf |\n",
-               totalDictTrainingTime / successfulOperationsCount, minDictTrainingTime, maxDictTrainingTime);
+               dictTrainingTime, minDictTrainingTime, maxDictTrainingTime);
         printf("| Compression time (s) + dict time | %12.6lf | %12.6lf | %12.6lf |\n",
-               totalCompressionTime / successfulOperationsCount + totalDictTrainingTime / successfulOperationsCount,
-               minCompressionTime, maxCompressionTime);
+               compressionTimeWithDict, minCompressionTime, maxCompressionTime);
         printf("| Compression ratio + dict size    | %12.6lf | %12.6lf | %12.6lf |\n",
-               totalCompressionRatioWithDict / successfulOperationsCount, minCompressionRatioWithDict,
-               maxCompressionRatioWithDict);
-        fprintf(csvFile, "%s,%12.6lf,%12.6lf\n", compression->name, totalCompressionTime / successfulOperationsCount + totalDictTrainingTime / successfulOperationsCount, totalCompressionRatioWithDict / successfulOperationsCount);
+               compressionRatioWithDict, minCompressionRatioWithDict, maxCompressionRatioWithDict);
+        fprintf(csvFile, "%s,%12.6lf,%12.6lf\n", compression->name, compressionTimeWithDict, compressionRatioWithDict);
     }
     else {
-        fprintf(csvFile, "%s,%12.6lf,%12.6lf\n", compression->name, totalCompressionTime / successfulOperationsCount, totalCompressionRatioWithDict / successfulOperationsCount);
+        fprintf(csvFile, "%s,%12.6lf,%12.6lf\n", compression->name, compressionTime, compressionRatio);
     }
     printf("| Compression time (s)             | %12.6lf | %12.6lf | %12.6lf |\n",
-           totalCompressionTime / successfulOperationsCount, minCompressionTime, maxCompressionTime);
+           compressionTime, minCompressionTime, maxCompressionTime);
     printf("| Decompression time (s)           | %12.6lf | %12.6lf | %12.6lf |\n",
            totalDecompressionTime / successfulOperationsCount, minDecompressionTime, maxDecompressionTime);
     printf("| Compression ratio                | %12.6lf | %12.6lf | %12.6lf |\n",
-           totalCompressionRatio / successfulOperationsCount, minCompressionRatio, maxCompressionRatio);
+           compressionRatio, minCompressionRatio, maxCompressionRatio);
     printf("+----------------------------------+--------------+--------------+--------------+\n");
 
     fclose(csvFile);
