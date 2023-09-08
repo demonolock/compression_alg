@@ -79,6 +79,7 @@ compress_16_blk(CompressionInterface *compression) {
     for (int i = 0; i < SAMPLE_COUNT; i++) {
         samplesSizes[i] = PAGE_SIZE;
     }
+    size_t dictSize = 0;
 
     while (numFiles > 0) {
         size_t bytesRead = readDataFromMultipleFiles(remainingFiles, &numFiles, data);
@@ -91,10 +92,9 @@ compress_16_blk(CompressionInterface *compression) {
             fprintf(stderr, "File size exceeds the maximum training size\n");
             continue;
         }
-        size_t dictSize = 0;
 
         // Dictionary Training
-        if (compression->trainDict) {  /* If using dictionary */
+        if (compression->trainDict && dictSize==0) {  /* If using dictionary */
             clock_t dictStartTime = clock();
             dictSize = compression->trainDict(dictBuffer, MAX_DICT_SIZE, data, samplesSizes, SAMPLE_COUNT);
             clock_t dictEndTime = clock();
@@ -237,7 +237,7 @@ compress_1_blk(CompressionInterface *compression) {
     for (int i = 0; i < SAMPLE_COUNT; i++) {
         samplesSizes[i] = PAGE_SIZE;
     }
-
+    size_t dictSize = 0;
     while (numFiles > 0) {
         size_t bytesRead = readDataFromMultipleFiles(remainingFiles, &numFiles, data);
         if (bytesRead <= 0) {
@@ -249,10 +249,9 @@ compress_1_blk(CompressionInterface *compression) {
             fprintf(stderr, "File size exceeds the maximum training size\n");
             continue;
         }
-        size_t dictSize = 0;
 
         // Dictionary Training
-        if (compression->trainDict) {  /* If using dictionary */
+        if (compression->trainDict && dictSize==0) {  /* If using dictionary */
             clock_t dictStartTime = clock();
             dictSize = compression->trainDict(dictBuffer, MAX_DICT_SIZE, data, samplesSizes, SAMPLE_COUNT);
             clock_t dictEndTime = clock();
